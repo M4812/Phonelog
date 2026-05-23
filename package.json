@@ -1,0 +1,16 @@
+{
+  "name": "phone-record-app",
+  "version": "1.0.0",
+  "description": "轻量级电话记录管理系统，使用 JSON 文件持久化数据。",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "package:win2012": "powershell -NoProfile -ExecutionPolicy Bypass -File ./tools/package-win2012-portable.ps1",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.18.3",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {}
+}
