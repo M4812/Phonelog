@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.cache/
+.superpowers/
+
+data/records.json
+*.log
+*.tmp
+Thumbs.db
+.DS_Store
