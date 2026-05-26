@@ -14,7 +14,9 @@
 
 ## 界面截图
 
-![主界面 - 来电记录](screenshots/app-main.png)
+![主界面 - 来电记录](screenshots/main.png)
+
+![来电记录列表](screenshots/records.png)
 
 ![通讯录管理](screenshots/contacts.png)
 
