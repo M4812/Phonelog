@@ -1,35 +1,63 @@
 # 电话记录管理系统
 
-轻量级电话记录管理系统，用于登记来电问题、跟进处理状态、搜索历史记录并导出 CSV。
+轻量级电话记录管理系统，用于登记来电问题、跟进处理状态、管理通讯录和组织机构，支持搜索筛选、CSV 导入导出。
 
 ## 功能
 
-- 新增来电记录：来电时间、姓名、单位、电话、问题诉求和处理结果。
-- 历史记录管理：按来电时间倒序展示，可在表格内更新状态和处理结果。
-- 搜索和筛选：按姓名、单位、电话、问题关键词搜索，并按解决状态筛选。
-- CSV 导出：支持导出勾选记录。
-- CSV/JSON 导入：支持合并导入或覆盖导入。
-- JSON 文件持久化：数据保存到服务端运行目录的 `data/records.json`。
-- Windows Server 2012 R2 免安装发布包：内置 Node.js 16.20.2 win-x64 运行时。
+- **来电记录管理**：登记来电时间、姓名、单位、电话、问题诉求、处理结果及解决状态
+- **通讯录管理**：自动从来电记录同步，支持按单位/电话号码去重，累计来电次数
+- **组织机构维护**：支持处/科两级架构（一处至七处，每处一至八科），来电单位必须从组织机构中选择
+- **搜索和筛选**：按姓名、单位、电话、问题关键词搜索，按解决状态筛选
+- **CSV 导出**：导出全部记录为 CSV 文件
+- **CSV/JSON 导入**：支持合并导入或覆盖导入
+- **JSON 文件持久化**：数据保存在 `data/records.json`，备份只需复制 `data` 目录
 
-## 访问方式
+## 界面截图
 
-服务部署在 A 服务器后，A 和 B 都访问同一个地址：
+![主界面 - 来电记录](screenshots/app-main.png)
 
-```text
-http://A服务器IP:3000
-```
+![通讯录管理](screenshots/contacts.png)
 
-只要浏览器地址栏访问的是 A 服务器的 IP 和端口，页面和接口都会连接 A 服务器正在运行的服务，新增、删除、修改都会写入 A 服务器发布目录下的 `data/records.json`。
+## 部署方式
 
-## 本地运行
+### 方式一：Windows Server 免安装包
+
+适用于 Windows Server 2012 R2 及以上 64 位系统，无需安装 Node.js：
+
+1. 从 [Releases](../../releases) 下载 `phone-record-app-win2012r-portable.zip`
+2. 解压到目标目录
+3. 双击 `start-windows.bat` 启动服务
+4. 如需其他电脑访问，右键管理员运行 `allow-firewall-port-3000-admin.bat`
+
+### 方式二：Node.js 直接运行
 
 ```bash
 npm install
 npm start
 ```
 
-默认监听 `0.0.0.0:3000`。启动后控制台会打印本机和局域网访问地址。
+默认监听 `0.0.0.0:3000`，启动后控制台会打印本机和局域网访问地址。
+
+## 访问方式
+
+服务部署在 A 服务器后，所有电脑都访问同一个地址：
+
+```
+http://A服务器IP:3000
+```
+
+所有数据读写都在 A 服务器的 `data/` 目录下，不同电脑看到的是同一份数据。
+
+## 修改端口
+
+```bash
+# Windows 命令行
+set PORT=8080
+start-windows.bat
+
+# 或 Node.js 直接运行时
+PORT=8080 npm start
+```
 
 ## 测试
 
@@ -37,21 +65,20 @@ npm start
 npm test
 ```
 
-## 打包 Windows Server 2012 R2 免安装包
+## 打包免安装包
 
 ```powershell
 npm run package:win2012
 ```
 
-打包产物会生成到：
+产物生成到 `dist/phone-record-app-win2012r-portable/` 和对应的 zip 文件。
 
-```text
-dist/phone-record-app-win2012r-portable/
-dist/phone-record-app-win2012r-portable.zip
-```
+## 数据备份
 
-目标服务器解压 zip 后双击 `start-windows.bat` 即可运行。如果同网段电脑无法访问，右键管理员运行 `allow-firewall-port-3000-admin.bat` 放行端口。
+复制发布目录下的 `data` 文件夹即可。不要在程序运行时手动编辑其中的 JSON 文件。
 
-## 数据说明
+## 技术栈
 
-真实数据文件 `data/records.json` 不提交到 Git。首次运行时程序会自动创建空数组文件。备份时复制发布目录下的整个 `data` 文件夹即可。
+- Node.js + Express
+- 原生 HTML/CSS/JavaScript（无前端框架）
+- JSON 文件持久化
