@@ -1,5 +1,8 @@
 let records = [];
+let contacts = [];
+let organizations = [];
 const selectedRecordIds = new Set();
+let recordCurrentPage = 1;
 
 function pad(value) {
   return String(value).padStart(2, '0');
@@ -21,7 +24,6 @@ function todayString() {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
-// 统计逻辑独立出来，避免 UI 文案变化影响核心数量计算。
 function getSummaryCounts(sourceRecords, today = todayString()) {
   const todayRecords = sourceRecords.filter((record) => String(record.callTime || '').startsWith(today));
   const todayResolved = todayRecords.filter((record) => record.isResolved).length;
@@ -35,9 +37,108 @@ function getSummaryCounts(sourceRecords, today = todayString()) {
   };
 }
 
-// 核心筛选逻辑：独立成纯函数，便于浏览器实时筛选和 Node 测试共用。
+function normalizeSearchText(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+}
+
+function normalizePhoneDigits(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function recordFieldMatches(field, recordValue, keyword) {
+  const text = String(recordValue || '').trim();
+  const normalizedKeyword = String(keyword || '').trim().toLowerCase();
+  if (!text || !normalizedKeyword) {
+    return false;
+  }
+
+  if (field === 'phoneNumber') {
+    return normalizePhoneDigits(text).includes(normalizePhoneDigits(keyword));
+  }
+
+  return text.toLowerCase().includes(normalizedKeyword) ||
+    normalizeSearchText(text).includes(normalizeSearchText(keyword));
+}
+
+function getRecordFieldSuggestions(sourceRecords, field, keyword, limit = 6, sourceContacts = []) {
+  const seenValues = new Set();
+  const suggestions = [];
+
+  [...sourceContacts, ...sourceRecords].forEach((record) => {
+    const value = String(record?.[field] || '').trim();
+    if (!value || seenValues.has(value) || !recordFieldMatches(field, value, keyword)) {
+      return;
+    }
+
+    seenValues.add(value);
+    suggestions.push({
+      value,
+      callerName: record.callerName || '',
+      callerUnit: record.callerUnit || '',
+      phoneNumber: record.phoneNumber || ''
+    });
+  });
+
+  return suggestions.slice(0, limit);
+}
+
+function getOrganizationSuggestions(sourceOrganizations, keyword, limit = Infinity) {
+  const normalizedKeyword = normalizeSearchText(keyword);
+  if (!normalizedKeyword) {
+    return sourceOrganizations.slice(0, limit);
+  }
+
+  return sourceOrganizations
+    .filter((organization) => normalizeSearchText(getOrganizationDisplayName(organization)).includes(normalizedKeyword))
+    .slice(0, limit);
+}
+
+function isKnownOrganizationName(sourceOrganizations, value) {
+  const normalizedValue = normalizeSearchText(value);
+  return Boolean(normalizedValue) && sourceOrganizations.some((organization) => normalizeSearchText(getOrganizationDisplayName(organization)) === normalizedValue);
+}
+
+function getOrganizationValidationMessage(sourceOrganizations, value) {
+  const text = String(value || '').trim();
+  if (!text || isKnownOrganizationName(sourceOrganizations, text)) {
+    return '';
+  }
+  return '请选择已维护的组织机构';
+}
+
+const CHINESE_ORGANIZATION_NUMBERS = ['零', '一', '二', '三', '四', '五', '六', '七', '八'];
+
+function getOrganizationDisplayName(organization) {
+  const explicitName = String(organization?.name || '').trim();
+  if (explicitName) {
+    return explicitName;
+  }
+
+  const sectionMatch = String(organization?.id || '').match(/^org-office-([1-7])-section-([1-8])$/);
+  if (sectionMatch) {
+    const office = Number(sectionMatch[1]);
+    const section = Number(sectionMatch[2]);
+    return `${CHINESE_ORGANIZATION_NUMBERS[office]}处${CHINESE_ORGANIZATION_NUMBERS[section]}科`;
+  }
+
+  const fallbackNames = {
+    'org-center': '中心',
+    'org-office-1': '一处',
+    'org-office-2': '二处',
+    'org-office-3': '三处',
+    'org-office-4': '四处',
+    'org-office-5': '五处',
+    'org-office-6': '六处',
+    'org-office-7': '七处'
+  };
+
+  return fallbackNames[String(organization?.id || '')] || '';
+}
+
 function filterRecords(sourceRecords, keyword = '', status = 'all') {
   const normalizedKeyword = String(keyword || '').trim().toLowerCase();
+  const compactKeyword = normalizeSearchText(keyword);
+  const keywordDigits = normalizePhoneDigits(keyword);
 
   return sourceRecords.filter((record) => {
     const matchesStatus =
@@ -59,8 +160,15 @@ function filterRecords(sourceRecords, keyword = '', status = 'all') {
       record.phoneNumber,
       record.question
     ].join(' ').toLowerCase();
+    const compactCallerText = [
+      record.callerName,
+      record.callerUnit
+    ].map(normalizeSearchText).join(' ');
+    const phoneDigits = normalizePhoneDigits(record.phoneNumber);
 
-    return searchableText.includes(normalizedKeyword);
+    return searchableText.includes(normalizedKeyword) ||
+      (compactKeyword && compactCallerText.includes(compactKeyword)) ||
+      (keywordDigits && phoneDigits.includes(keywordDigits));
   });
 }
 
@@ -88,9 +196,51 @@ function buildCsvForRecords(sourceRecords) {
   return `\uFEFF${[headers, ...rows].map((row) => row.map(csvEscape).join(',')).join('\r\n')}`;
 }
 
-// Node 测试环境没有 document，导出纯函数后直接结束，避免访问 DOM。
+function getResolvedSelectClass(value) {
+  return String(value) === 'true' ? 'select-resolved' : 'select-unresolved';
+}
+
+function getStatusFilterSelectClass(value) {
+  if (value === 'resolved') {
+    return 'select-resolved';
+  }
+  if (value === 'unresolved') {
+    return 'select-unresolved';
+  }
+  return '';
+}
+
+function getPagedItems(sourceItems, page = 1, pageSize = 10) {
+  const safePageSize = Math.max(1, Number(pageSize) || 10);
+  const pageCount = Math.max(1, Math.ceil(sourceItems.length / safePageSize));
+  const safePage = Math.min(Math.max(1, Number(page) || 1), pageCount);
+  const start = (safePage - 1) * safePageSize;
+
+  return {
+    items: sourceItems.slice(start, start + safePageSize),
+    page: safePage,
+    pageCount,
+    pageSize: safePageSize,
+    total: sourceItems.length
+  };
+}
+
+function getRecordPrefillFromSearchParams(search = '') {
+  const params = new URLSearchParams(search);
+  const callerUnit = String(params.get('callerUnit') || '').trim();
+
+  return {
+    shouldOpen: params.get('newRecord') === '1',
+    ...(callerUnit ? { callerUnit } : {})
+  };
+}
+
+function getRecordSearchFromSearchParams(search = '') {
+  return String(new URLSearchParams(search).get('search') || '').trim();
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { buildCsvForRecords, filterRecords, getSummaryCounts };
+  module.exports = { buildCsvForRecords, filterRecords, getOrganizationDisplayName, getOrganizationSuggestions, getOrganizationValidationMessage, getPagedItems, getRecordFieldSuggestions, getRecordPrefillFromSearchParams, getRecordSearchFromSearchParams, getResolvedSelectClass, getStatusFilterSelectClass, getSummaryCounts, isKnownOrganizationName };
 }
 
 if (typeof document !== 'undefined') {
@@ -105,28 +255,169 @@ if (typeof document !== 'undefined') {
   const statusFilter = document.getElementById('statusFilter');
   const exportCsvBtn = document.getElementById('exportCsvBtn');
   const selectAllRecords = document.getElementById('selectAllRecords');
-  const recordModalElement = document.getElementById('recordModal');
+  const recordPageSize = document.getElementById('recordPageSize');
+  const recordPrevPage = document.getElementById('recordPrevPage');
+  const recordNextPage = document.getElementById('recordNextPage');
+  const recordPageInfo = document.getElementById('recordPageInfo');
+  const recordModal = document.getElementById('recordModal');
+  const importModal = document.getElementById('importModal');
+  const organizationModal = document.getElementById('organizationModal');
+  const openImportBtn = document.getElementById('openImportBtn');
+  const openOrganizationBtn = document.getElementById('openOrganizationBtn');
+  const organizationForm = document.getElementById('organizationForm');
+  const organizationName = document.getElementById('organizationName');
+  const organizationList = document.getElementById('organizationList');
+  const organizationStatus = document.getElementById('organizationStatus');
+  const suggestionInputs = Array.from(document.querySelectorAll('[data-suggestion-field]'));
+  const organizationInput = document.querySelector('[data-organization-field]');
 
-  function getRecordModal() {
-    if (!recordModalElement || typeof bootstrap === 'undefined') {
-      return null;
-    }
+  function openModal(modal) {
+    modal.hidden = false;
+    document.body.classList.add('modal-open');
+  }
 
-    return bootstrap.Modal.getOrCreateInstance(recordModalElement);
+  function closeModal(modal) {
+    modal.hidden = true;
+    document.body.classList.remove('modal-open');
   }
 
   function setDefaultCallTime() {
     document.getElementById('callTime').value = toDateTimeLocalValue();
+    document.getElementById('isResolved').value = 'true';
+    updateResolvedSelectTone(document.getElementById('isResolved'));
+  }
+
+  function applyRecordPrefill(prefill) {
+    if (prefill.callerUnit) {
+      document.getElementById('callerUnit').value = prefill.callerUnit;
+    }
+  }
+
+  function updateResolvedSelectTone(select) {
+    select.classList.remove('select-resolved', 'select-unresolved');
+    select.classList.add(getResolvedSelectClass(select.value));
+  }
+
+  function updateStatusFilterTone() {
+    statusFilter.classList.remove('select-resolved', 'select-unresolved');
+    const className = getStatusFilterSelectClass(statusFilter.value);
+    if (className) {
+      statusFilter.classList.add(className);
+    }
   }
 
   function setStatus(element, message, isError = false) {
     element.textContent = message;
-    element.classList.toggle('text-danger', isError);
-    element.classList.toggle('text-muted', !isError);
+    element.classList.toggle('error-text', isError);
+  }
+
+  function setOrganizationStatus(message, isError = false) {
+    organizationStatus.textContent = message;
+    organizationStatus.classList.toggle('error-text', isError);
+  }
+
+  function validateOrganizationInput(input) {
+    const message = getOrganizationValidationMessage(organizations, input.value);
+    if (message) {
+      setStatus(formStatus, message, true);
+      return false;
+    }
+
+    if (formStatus.textContent === '请选择已维护的组织机构') {
+      setStatus(formStatus, '');
+    }
+    return true;
+  }
+
+  function hideSuggestionList(input) {
+    const list = document.getElementById(`${input.id}Suggestions`);
+    if (list) {
+      list.hidden = true;
+      list.innerHTML = '';
+    }
+  }
+
+  function ensureSuggestionList(input) {
+    const listId = `${input.id}Suggestions`;
+    let list = document.getElementById(listId);
+
+    if (!list) {
+      list = document.createElement('div');
+      list.id = listId;
+      list.className = 'suggestion-list';
+      list.hidden = true;
+      input.insertAdjacentElement('afterend', list);
+    }
+
+    return list;
+  }
+
+  function renderSuggestionList(input) {
+    const field = input.dataset.suggestionField;
+  const suggestions = getRecordFieldSuggestions(records, field, input.value, 6, contacts);
+    const list = ensureSuggestionList(input);
+    list.innerHTML = '';
+
+    if (suggestions.length === 0) {
+      list.hidden = true;
+      return;
+    }
+
+    suggestions.forEach((suggestion) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'suggestion-item';
+      button.dataset.value = suggestion.value;
+
+      const valueText = document.createElement('strong');
+      valueText.textContent = suggestion.value;
+
+      const metaText = document.createElement('span');
+      metaText.textContent = [suggestion.callerName, suggestion.callerUnit, suggestion.phoneNumber]
+        .filter(Boolean)
+        .join(' / ');
+
+      button.append(valueText, metaText);
+      list.appendChild(button);
+    });
+
+    list.hidden = false;
+  }
+
+  function hideAllSuggestionLists() {
+    [...suggestionInputs, organizationInput].filter(Boolean).forEach(hideSuggestionList);
+  }
+
+  function acceptFirstSuggestion(input) {
+    const list = document.getElementById(`${input.id}Suggestions`);
+    const firstItem = list?.querySelector('.suggestion-item');
+
+    if (!firstItem || list.hidden) {
+      return false;
+    }
+
+    input.value = firstItem.dataset.value || '';
+    hideSuggestionList(input);
+
+    const matchedContact = contacts.find((contact) => {
+      if (input.dataset.suggestionField === 'phoneNumber') {
+        return normalizePhoneDigits(contact.phoneNumber) === normalizePhoneDigits(input.value);
+      }
+      return String(contact[input.dataset.suggestionField] || '').trim() === input.value;
+    });
+
+    if (matchedContact) {
+      fillCallerFromContact(matchedContact, true);
+    }
+
+    return true;
   }
 
   async function fetchJson(url, options = {}) {
-    const response = await fetch(url, options);
+    const response = await fetch(url, {
+      cache: 'no-store',
+      ...options
+    });
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
@@ -136,8 +427,144 @@ if (typeof document !== 'undefined') {
     return data;
   }
 
+  async function findContactByPhone(phoneNumber) {
+    const phoneDigits = normalizePhoneDigits(phoneNumber);
+    if (!phoneDigits) {
+      return null;
+    }
+
+    const data = await fetchJson(`/api/contacts/lookup?phone=${encodeURIComponent(phoneNumber)}`);
+    return data.contact || null;
+  }
+
+  function fillCallerFromContact(contact, force = false) {
+    const phoneInput = document.getElementById('phoneNumber');
+    const callerUnitInput = document.getElementById('callerUnit');
+    const callerNameInput = document.getElementById('callerName');
+
+    if (contact.phoneNumber && (force || !phoneInput.value.trim())) {
+      phoneInput.value = contact.phoneNumber;
+    }
+    if (contact.callerUnit && (force || !callerUnitInput.value.trim())) {
+      callerUnitInput.value = contact.callerUnit;
+    }
+    if (contact.callerName && (force || !callerNameInput.value.trim())) {
+      callerNameInput.value = contact.callerName;
+    }
+  }
+
+  async function autofillCallerFromContact(phoneNumber) {
+    const contact = await findContactByPhone(phoneNumber);
+    if (!contact) {
+      return false;
+    }
+
+    // 主页面联动接口：管理员输入来电电话后，按通讯录 JSON 查询历史联系人。
+    // 命中时自动填充单位和姓名；如果用户已经手动输入，则不强行覆盖，避免误改。
+    fillCallerFromContact(contact);
+    return true;
+  }
+
+  async function loadContacts() {
+    contacts = await fetchJson('/api/contacts');
+  }
+
+  async function loadOrganizations() {
+    organizations = await fetchJson('/api/organizations');
+    renderOrganizations();
+  }
+
+  async function saveOrganization(id, name) {
+    const url = id ? `/api/organizations/${encodeURIComponent(id)}` : '/api/organizations';
+    const result = await fetchJson(url, {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    organizations = result.organizations;
+    renderOrganizations();
+    return result;
+  }
+
+  async function deleteOrganization(id) {
+    const result = await fetchJson(`/api/organizations/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    organizations = result.organizations;
+    renderOrganizations();
+    return result;
+  }
+
+  function renderOrganizationSuggestionList(input) {
+    const suggestions = getOrganizationSuggestions(organizations, input.value);
+    const list = ensureSuggestionList(input);
+    list.innerHTML = '';
+
+    if (suggestions.length === 0) {
+      list.hidden = true;
+      return;
+    }
+
+    suggestions.forEach((organization) => {
+      const organizationName = getOrganizationDisplayName(organization);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'suggestion-item organization-suggestion-item';
+      button.dataset.value = organizationName;
+
+      const valueText = document.createElement('strong');
+      valueText.textContent = organizationName;
+      button.appendChild(valueText);
+      list.appendChild(button);
+    });
+
+    list.hidden = false;
+  }
+
+  function renderOrganizations() {
+    organizationList.innerHTML = '';
+
+    if (organizations.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'organization-empty';
+      empty.textContent = '暂无组织机构';
+      organizationList.appendChild(empty);
+      return;
+    }
+
+    organizations.forEach((organization) => {
+      const organizationName = getOrganizationDisplayName(organization);
+      const row = document.createElement('div');
+      row.className = 'organization-row';
+      row.dataset.id = organization.id;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = organizationName;
+      input.setAttribute('value', organizationName);
+      input.maxLength = 100;
+
+      const saveButton = document.createElement('button');
+      saveButton.type = 'button';
+      saveButton.className = 'row-btn js-save-organization';
+      saveButton.textContent = '保存';
+
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'row-btn danger js-delete-organization';
+      deleteButton.textContent = '删除';
+
+      row.append(input, saveButton, deleteButton);
+      organizationList.appendChild(row);
+    });
+  }
+
   function getVisibleRecords() {
     return filterRecords(records, searchInput.value, statusFilter.value);
+  }
+
+  function getRecordPage() {
+    return getPagedItems(getVisibleRecords(), recordCurrentPage, recordPageSize.value);
   }
 
   function getSelectedRecords() {
@@ -145,12 +572,9 @@ if (typeof document !== 'undefined') {
   }
 
   function updateSelectAllState() {
-    const visibleRecords = getVisibleRecords();
-    if (!selectAllRecords) {
-      return;
-    }
-
+    const visibleRecords = getRecordPage().items;
     const selectedVisibleCount = visibleRecords.filter((record) => selectedRecordIds.has(record.id)).length;
+
     selectAllRecords.checked = visibleRecords.length > 0 && selectedVisibleCount === visibleRecords.length;
     selectAllRecords.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleRecords.length;
     selectAllRecords.disabled = visibleRecords.length === 0;
@@ -159,13 +583,17 @@ if (typeof document !== 'undefined') {
   function updateSummary() {
     const summary = getSummaryCounts(records);
     const visibleCount = getVisibleRecords().length;
+    const page = getRecordPage();
 
     document.getElementById('totalProblems').textContent = summary.totalProblems;
     document.getElementById('todayTotal').textContent = summary.todayTotal;
     document.getElementById('todayResolved').textContent = summary.todayResolved;
-    // 兼容原有 DOM id：页面文案已改为“未解决的问题”，这里统计全部历史未解决。
     document.getElementById('todayUnresolved').textContent = summary.totalUnresolved;
     recordCount.textContent = `显示 ${visibleCount} 条 / 共 ${records.length} 条，已选 ${selectedRecordIds.size} 条`;
+    recordCurrentPage = page.page;
+    recordPageInfo.textContent = `第 ${page.page} / ${page.pageCount} 页`;
+    recordPrevPage.disabled = page.page <= 1;
+    recordNextPage.disabled = page.page >= page.pageCount;
     updateSelectAllState();
   }
 
@@ -178,16 +606,9 @@ if (typeof document !== 'undefined') {
     return cell;
   }
 
-  function createStatusBadge(record) {
-    const badge = document.createElement('span');
-    badge.className = `badge ${record.isResolved ? 'bg-success' : 'bg-danger'}`;
-    badge.textContent = record.isResolved ? '已解决' : '未解决';
-    return badge;
-  }
-
   function createStatusSelect(record) {
     const select = document.createElement('select');
-    select.className = 'form-select form-select-sm status-select js-status';
+    select.className = 'status-select js-status';
 
     const unresolved = document.createElement('option');
     unresolved.value = 'false';
@@ -204,14 +625,14 @@ if (typeof document !== 'undefined') {
 
   function renderEmptyRow(message, isError = false) {
     const row = document.createElement('tr');
-    const cell = createCell(message, `text-center ${isError ? 'text-danger' : 'text-muted'} py-4`);
+    const cell = createCell(message, `empty-cell${isError ? ' error-text' : ''}`);
     cell.colSpan = 9;
     row.appendChild(cell);
     recordsBody.appendChild(row);
   }
 
   function renderRecords() {
-    const visibleRecords = getVisibleRecords();
+    const visibleRecords = getRecordPage().items;
     recordsBody.innerHTML = '';
 
     if (records.length === 0) {
@@ -229,43 +650,37 @@ if (typeof document !== 'undefined') {
     visibleRecords.forEach((record) => {
       const row = document.createElement('tr');
       row.dataset.id = record.id;
-      if (!record.isResolved) {
-        row.classList.add('unresolved-row');
-      }
+      row.classList.toggle('unresolved-row', !record.isResolved);
 
       const selectCell = document.createElement('td');
-      selectCell.className = 'select-column';
+      selectCell.className = 'check-col';
       const rowCheckbox = document.createElement('input');
       rowCheckbox.type = 'checkbox';
-      rowCheckbox.className = 'form-check-input js-select-record';
+      rowCheckbox.className = 'js-select-record';
       rowCheckbox.setAttribute('aria-label', `选择记录 ${record.callerName || record.phoneNumber || record.id}`);
       rowCheckbox.checked = selectedRecordIds.has(record.id);
       selectCell.appendChild(rowCheckbox);
 
       const statusCell = document.createElement('td');
-      const statusStack = document.createElement('div');
-      statusStack.className = 'd-grid gap-2';
-      statusStack.append(createStatusBadge(record), createStatusSelect(record));
-      statusCell.appendChild(statusStack);
+      statusCell.appendChild(createStatusSelect(record));
 
       const resolutionCell = document.createElement('td');
       const resolutionInput = document.createElement('textarea');
-      resolutionInput.className = 'form-control form-control-sm js-resolution';
+      resolutionInput.className = 'js-resolution';
       resolutionInput.rows = 3;
       resolutionInput.value = record.resolution || '';
       resolutionCell.appendChild(resolutionInput);
 
       const actionCell = document.createElement('td');
-      actionCell.className = 'text-end';
       const actionStack = document.createElement('div');
       actionStack.className = 'row-actions';
       const saveButton = document.createElement('button');
       saveButton.type = 'button';
-      saveButton.className = 'btn btn-sm btn-outline-primary js-save-row';
+      saveButton.className = 'row-btn js-save-row';
       saveButton.textContent = '保存';
       const deleteButton = document.createElement('button');
       deleteButton.type = 'button';
-      deleteButton.className = 'btn btn-sm btn-outline-danger js-delete-row';
+      deleteButton.className = 'row-btn danger js-delete-row';
       deleteButton.textContent = '删除';
       actionStack.append(saveButton, deleteButton);
       actionCell.appendChild(actionStack);
@@ -274,7 +689,7 @@ if (typeof document !== 'undefined') {
         selectCell,
         createCell(record.callTime),
         createCell(record.callerName),
-        createCell(record.callerUnit || '-', 'unit-cell'),
+        createCell(record.callerUnit || '-', 'muted-cell'),
         createCell(record.phoneNumber),
         createCell(record.question, 'question-cell'),
         statusCell,
@@ -289,7 +704,7 @@ if (typeof document !== 'undefined') {
   }
 
   async function loadRecords() {
-    recordsBody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">正在加载...</td></tr>';
+    recordsBody.innerHTML = '<tr><td colspan="9" class="empty-cell">正在加载...</td></tr>';
     records = await fetchJson('/api/records');
     const existingIds = new Set(records.map((record) => record.id));
     Array.from(selectedRecordIds).forEach((id) => {
@@ -315,6 +730,13 @@ if (typeof document !== 'undefined') {
       resolution: formData.get('resolution')
     };
 
+    const callerUnitInput = document.getElementById('callerUnit');
+    if (!validateOrganizationInput(callerUnitInput)) {
+      callerUnitInput.focus();
+      renderOrganizationSuggestionList(callerUnitInput);
+      return;
+    }
+
     try {
       await fetchJson('/api/records', {
         method: 'POST',
@@ -324,8 +746,8 @@ if (typeof document !== 'undefined') {
 
       recordForm.reset();
       setDefaultCallTime();
-      setStatus(formStatus, '已保存');
-      getRecordModal()?.hide();
+      setStatus(formStatus, '');
+      closeModal(recordModal);
       await loadRecords();
     } catch (error) {
       setStatus(formStatus, error.message, true);
@@ -335,6 +757,70 @@ if (typeof document !== 'undefined') {
   resetFormBtn.addEventListener('click', () => {
     window.setTimeout(setDefaultCallTime, 0);
     setStatus(formStatus, '');
+    hideAllSuggestionLists();
+  });
+
+  suggestionInputs.forEach((input) => {
+    input.addEventListener('input', () => renderSuggestionList(input));
+    input.addEventListener('focus', () => renderSuggestionList(input));
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      acceptFirstSuggestion(input);
+    });
+    input.addEventListener('blur', () => {
+      window.setTimeout(() => hideSuggestionList(input), 120);
+    });
+  });
+
+  if (organizationInput) {
+    organizationInput.addEventListener('input', () => renderOrganizationSuggestionList(organizationInput));
+    organizationInput.addEventListener('focus', () => renderOrganizationSuggestionList(organizationInput));
+    organizationInput.addEventListener('blur', () => {
+      window.setTimeout(() => {
+        validateOrganizationInput(organizationInput);
+        hideSuggestionList(organizationInput);
+      }, 120);
+    });
+  }
+
+  document.getElementById('phoneNumber').addEventListener('blur', (event) => {
+    autofillCallerFromContact(event.target.value).catch(() => {});
+  });
+
+  recordForm.addEventListener('click', (event) => {
+    const item = event.target.closest('.suggestion-item');
+    if (!item) {
+      return;
+    }
+
+    const list = item.closest('.suggestion-list');
+    const input = list?.previousElementSibling;
+    if (!input || !input.matches('[data-suggestion-field], [data-organization-field]')) {
+      return;
+    }
+
+    input.value = item.dataset.value || '';
+    if (input.matches('[data-organization-field]')) {
+      hideSuggestionList(input);
+      input.focus();
+      return;
+    }
+
+    const matchedContact = contacts.find((contact) => {
+      if (input.dataset.suggestionField === 'phoneNumber') {
+        return normalizePhoneDigits(contact.phoneNumber) === normalizePhoneDigits(input.value);
+      }
+      return String(contact[input.dataset.suggestionField] || '').trim() === input.value;
+    });
+
+    if (matchedContact) {
+      fillCallerFromContact(matchedContact, true);
+    }
+    hideSuggestionList(input);
+    input.focus();
   });
 
   recordsBody.addEventListener('click', async (event) => {
@@ -418,6 +904,11 @@ if (typeof document !== 'undefined') {
 
     const row = event.target.closest('tr');
     row.classList.toggle('unresolved-row', event.target.value !== 'true');
+    updateResolvedSelectTone(event.target);
+  });
+
+  document.getElementById('isResolved').addEventListener('change', (event) => {
+    updateResolvedSelectTone(event.target);
   });
 
   importForm.addEventListener('submit', async (event) => {
@@ -437,18 +928,40 @@ if (typeof document !== 'undefined') {
 
       importForm.reset();
       setStatus(importStatus, `导入 ${data.imported} 条，当前共 ${data.total} 条`);
+      closeModal(importModal);
       await loadRecords();
     } catch (error) {
       setStatus(importStatus, error.message, true);
     }
   });
 
-  // 查询区事件：输入或切换状态时直接重绘当前前端数据，不刷新页面。
-  searchInput.addEventListener('input', renderRecords);
-  statusFilter.addEventListener('change', renderRecords);
+  searchInput.addEventListener('input', () => {
+    recordCurrentPage = 1;
+    renderRecords();
+  });
+  statusFilter.addEventListener('change', () => {
+    recordCurrentPage = 1;
+    updateStatusFilterTone();
+    renderRecords();
+  });
 
-  selectAllRecords?.addEventListener('change', () => {
-    const visibleRecords = getVisibleRecords();
+  recordPageSize.addEventListener('change', () => {
+    recordCurrentPage = 1;
+    renderRecords();
+  });
+
+  recordPrevPage.addEventListener('click', () => {
+    recordCurrentPage -= 1;
+    renderRecords();
+  });
+
+  recordNextPage.addEventListener('click', () => {
+    recordCurrentPage += 1;
+    renderRecords();
+  });
+
+  selectAllRecords.addEventListener('change', () => {
+    const visibleRecords = getRecordPage().items;
     if (selectAllRecords.checked) {
       visibleRecords.forEach((record) => selectedRecordIds.add(record.id));
     } else {
@@ -457,12 +970,10 @@ if (typeof document !== 'undefined') {
     renderRecords();
   });
 
-  exportCsvBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-
+  exportCsvBtn.addEventListener('click', () => {
     const selectedRecords = getSelectedRecords();
     if (selectedRecords.length === 0) {
-      alert('请先勾选要导出的记录，或点击表头复选框全选当前列表。');
+      alert('请先勾选要导出的记录，或点表头复选框全选当前列表。');
       return;
     }
 
@@ -479,14 +990,105 @@ if (typeof document !== 'undefined') {
     URL.revokeObjectURL(url);
   });
 
-  recordModalElement?.addEventListener('shown.bs.modal', () => {
+  document.querySelector('[data-modal-open]').addEventListener('click', () => {
     setDefaultCallTime();
+    setStatus(formStatus, '');
+    openModal(recordModal);
     document.getElementById('callerName').focus();
+  });
+
+  document.querySelector('[data-modal-close]').addEventListener('click', () => closeModal(recordModal));
+  openOrganizationBtn.addEventListener('click', () => {
+    setOrganizationStatus('');
+    organizationForm.reset();
+    openModal(organizationModal);
+    organizationName.focus();
+  });
+  document.querySelector('[data-organization-close]').addEventListener('click', () => closeModal(organizationModal));
+  openImportBtn.addEventListener('click', () => {
+    setStatus(importStatus, '');
+    openModal(importModal);
+  });
+  document.querySelector('[data-import-close]').addEventListener('click', () => closeModal(importModal));
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    if (!recordModal.hidden) {
+      closeModal(recordModal);
+    }
+    if (!organizationModal.hidden) {
+      closeModal(organizationModal);
+    }
+    if (!importModal.hidden) {
+      closeModal(importModal);
+    }
+  });
+
+  organizationForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    setOrganizationStatus('正在保存...');
+    try {
+      await saveOrganization(null, organizationName.value);
+      organizationForm.reset();
+      setOrganizationStatus('已保存');
+      organizationName.focus();
+    } catch (error) {
+      setOrganizationStatus(error.message, true);
+    }
+  });
+
+  organizationList.addEventListener('click', async (event) => {
+    const row = event.target.closest('.organization-row');
+    if (!row) {
+      return;
+    }
+
+    const id = row.dataset.id;
+    const name = row.querySelector('input').value;
+
+    if (event.target.classList.contains('js-save-organization')) {
+      try {
+        await saveOrganization(id, name);
+        setOrganizationStatus('已保存');
+      } catch (error) {
+        setOrganizationStatus(error.message, true);
+      }
+      return;
+    }
+
+    if (event.target.classList.contains('js-delete-organization')) {
+      const organization = organizations.find((item) => item.id === id);
+      if (!confirm(`确定删除组织机构吗？\n${organization?.name || name}`)) {
+        return;
+      }
+      try {
+        await deleteOrganization(id);
+        setOrganizationStatus('已删除');
+      } catch (error) {
+        setOrganizationStatus(error.message, true);
+      }
+    }
   });
 
   document.addEventListener('DOMContentLoaded', () => {
     setDefaultCallTime();
-    loadRecords().catch((error) => {
+    updateStatusFilterTone();
+    const recordSearch = getRecordSearchFromSearchParams(window.location.search);
+    if (recordSearch) {
+      searchInput.value = recordSearch;
+    }
+
+    const prefill = getRecordPrefillFromSearchParams(window.location.search);
+
+    if (prefill.shouldOpen) {
+      applyRecordPrefill(prefill);
+      setStatus(formStatus, '');
+      openModal(recordModal);
+      document.getElementById(prefill.callerUnit ? 'phoneNumber' : 'callerName').focus();
+    }
+
+    Promise.all([loadContacts(), loadOrganizations(), loadRecords()]).catch((error) => {
       recordsBody.innerHTML = '';
       renderEmptyRow(error.message, true);
     });

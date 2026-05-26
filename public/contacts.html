@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>来电统计</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="contacts-page">
+  <header class="app-header">
+    <div class="app-shell header-inner">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M6.75 4.5h10.5A1.75 1.75 0 0 1 19 6.25v11.5a1.75 1.75 0 0 1-1.75 1.75H6.75A1.75 1.75 0 0 1 5 17.75V6.25A1.75 1.75 0 0 1 6.75 4.5Zm1.2 3v1.6h8.1V7.5h-8.1Zm0 3.35v1.6h8.1v-1.6h-8.1Zm0 3.35v1.6h5.25v-1.6H7.95Z"></path>
+          </svg>
+        </div>
+        <div>
+          <p class="header-kicker">Call Statistics</p>
+          <h1>来电统计</h1>
+        </div>
+      </div>
+      <div class="storage-status" aria-label="数据存储路径">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="storage-label">数据存储路径</span>
+        <code>Storage: ./data/contacts.json</code>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell app-main contacts-layout">
+    <section class="contacts-hero">
+      <div>
+        <p class="eyebrow">CALL STATISTICS</p>
+        <h2>来电统计</h2>
+        <p>按单位名称汇总来电次数和最后来电时间，点击单位名称或累计来电次数可直接登记新的来电问题。</p>
+      </div>
+      <div class="contacts-hero-actions">
+        <a class="btn return-records-btn" href="/">返回登记表</a>
+        <a class="btn primary register-problem-btn" href="/?newRecord=1">去登记问题</a>
+      </div>
+    </section>
+
+    <section class="contacts-grid">
+      <section class="contacts-panel">
+        <div class="contacts-toolbar">
+          <label class="contact-search-box">
+            <span aria-hidden="true">⌕</span>
+            <input id="contactSearch" type="search" placeholder="搜索最后来电电话、单位名称或最后来电联系人">
+          </label>
+          <span id="contactCount" class="count-pill">共 0 条</span>
+          <div class="pagination-bar inline" aria-label="来电统计分页">
+            <label>
+              <span>每页显示</span>
+              <select id="contactPageSize">
+                <option value="10">10 条</option>
+                <option value="20">20 条</option>
+                <option value="50" selected>50 条</option>
+                <option value="100">100 条</option>
+              </select>
+            </label>
+            <div class="pagination-actions">
+              <button type="button" class="row-btn" id="contactPrevPage">上一页</button>
+              <span id="contactPageInfo">第 1 / 1 页</span>
+              <button type="button" class="row-btn" id="contactNextPage">下一页</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrap contacts-table-wrap">
+          <table class="records-table contacts-table">
+            <thead>
+              <tr>
+                <th>序号</th>
+                <th>单位名称</th>
+                <th>最后来电电话</th>
+                <th>最后来电联系人</th>
+                <th>累计来电次数</th>
+                <th>最后来电时间</th>
+              </tr>
+            </thead>
+            <tbody id="contactsBody">
+              <tr>
+                <td colspan="6" class="empty-cell">正在加载...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/contacts.js"></script>
+</body>
+</html>

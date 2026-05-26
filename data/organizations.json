@@ -1,0 +1,392 @@
+[
+  {
+    "id": "org-center",
+    "name": "中心",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-1",
+    "name": "一处",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-1-section-1",
+    "name": "一处一科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-1-section-2",
+    "name": "一处二科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-1-section-3",
+    "name": "一处三科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-1-section-4",
+    "name": "一处四科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-1-section-5",
+    "name": "一处五科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-1-section-6",
+    "name": "一处六科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-1-section-7",
+    "name": "一处七科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-1-section-8",
+    "name": "一处八科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-2",
+    "name": "二处",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-2-section-1",
+    "name": "二处一科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-2-section-2",
+    "name": "二处二科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-2-section-3",
+    "name": "二处三科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-2-section-4",
+    "name": "二处四科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-2-section-5",
+    "name": "二处五科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-2-section-6",
+    "name": "二处六科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-2-section-7",
+    "name": "二处七科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-2-section-8",
+    "name": "二处八科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-3",
+    "name": "三处",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-3-section-1",
+    "name": "三处一科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-3-section-2",
+    "name": "三处二科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-3-section-3",
+    "name": "三处三科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-3-section-4",
+    "name": "三处四科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-3-section-5",
+    "name": "三处五科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-3-section-6",
+    "name": "三处六科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-3-section-7",
+    "name": "三处七科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-3-section-8",
+    "name": "三处八科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-4",
+    "name": "四处",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-4-section-1",
+    "name": "四处一科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-4-section-2",
+    "name": "四处二科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-4-section-3",
+    "name": "四处三科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-4-section-4",
+    "name": "四处四科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-4-section-5",
+    "name": "四处五科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-4-section-6",
+    "name": "四处六科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-4-section-7",
+    "name": "四处七科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-4-section-8",
+    "name": "四处八科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-5",
+    "name": "五处",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-5-section-1",
+    "name": "五处一科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-5-section-2",
+    "name": "五处二科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-5-section-3",
+    "name": "五处三科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-5-section-4",
+    "name": "五处四科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-5-section-5",
+    "name": "五处五科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-5-section-6",
+    "name": "五处六科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-5-section-7",
+    "name": "五处七科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-5-section-8",
+    "name": "五处八科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-6",
+    "name": "六处",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-6-section-1",
+    "name": "六处一科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-6-section-2",
+    "name": "六处二科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-6-section-3",
+    "name": "六处三科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-6-section-4",
+    "name": "六处四科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-6-section-5",
+    "name": "六处五科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-6-section-6",
+    "name": "六处六科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-6-section-7",
+    "name": "六处七科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-6-section-8",
+    "name": "六处八科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-7",
+    "name": "七处",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-7-section-1",
+    "name": "七处一科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-7-section-2",
+    "name": "七处二科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-7-section-3",
+    "name": "七处三科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-7-section-4",
+    "name": "七处四科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-7-section-5",
+    "name": "七处五科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-7-section-6",
+    "name": "七处六科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-7-section-7",
+    "name": "七处七科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "org-office-7-section-8",
+    "name": "七处八科",
+    "createdAt": "2026-05-26 20:00",
+    "updatedAt": "2026-05-26 20:00"
+  },
+  {
+    "id": "1779803468043-0000-fb9d6e8b-6e5e-4f0a-9403-cf21484e2d96",
+    "name": "����",
+    "createdAt": "2026-05-26 21:51",
+    "updatedAt": "2026-05-26 21:51"
+  }
+]
